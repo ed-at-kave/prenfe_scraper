@@ -1,0 +1,36 @@
+[project]
+name = "prenfe-scraper"
+version = "0.1.0"
+description = "RENFE real-time train fleet data scraper"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.28.0",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W"]

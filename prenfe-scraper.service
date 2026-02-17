@@ -1,0 +1,36 @@
+[Unit]
+Description=RENFE Train Data Scraper
+Documentation=file:///home/eguiu/betas/Prenfe/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eguiu
+Group=eguiu
+WorkingDirectory=/home/eguiu/betas/Prenfe
+
+# Activate virtual environment and run scraper
+ExecStart=/bin/bash -c 'source /home/eguiu/betas/Prenfe/.venv/bin/activate && python3 /home/eguiu/betas/Prenfe/scraper.py'
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=prenfe-scraper
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
