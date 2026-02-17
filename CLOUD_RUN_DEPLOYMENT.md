@@ -162,6 +162,21 @@ gcloud pubsub subscriptions create prenfe-scraper-subscription \
   --project=${PROJECT_ID}
 ```
 
+## Step 4: Deploy with Terraform (Complete Setup)
+
+Once Terraform is installed, deploy all infrastructure with:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+This will create:
+- Service account: prenfe-scraper
+- IAM role bindings for storage and logging
+- 4 Cloud Scheduler jobs for dynamic scheduling
+
 ## Monitoring and Logs
 
 ### View logs
