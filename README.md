@@ -114,6 +114,14 @@ prenfe/
 - Output: `data/prenfe-cat_YYYYMMDD_HHMMSS.json`
 - Use case: Complete regional rail network monitoring
 
+**Note on RG*, RL*, and RT* Lines:**
+- These regional services (Girona, Lleida, Tarragona) are defined in the filter based on RENFE's website UI
+- However, they may not always be present in the real-time API response depending on:
+  - Current operating schedule and time of day
+  - Seasonal availability
+  - Service status
+- The filter is configured to capture them automatically when they appear in the API data
+
 ---
 
 ## Features
