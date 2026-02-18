@@ -86,13 +86,13 @@ gcloud run deploy ${SERVICE_NAME} \
 
 ## Step 3: Deploy with Terraform
 
-Cloud Scheduler triggers the scraper at dynamic intervals (Paris Time - CET / UTC+1):
-- **Low morning (5-minute intervals)**: 05:00-05:59 CET (UTC: 04:00-04:59)
-- **High morning (2-minute intervals)**: 06:00-09:59 CET (UTC: 05:00-08:59)
-- **Off-peak (10-minute intervals)**: 10:00-15:59 CET (UTC: 09:00-14:59)
-- **High evening (2-minute intervals)**: 16:00-18:59 CET (UTC: 15:00-17:59)
-- **Low evening (5-minute intervals)**: 19:00-23:59 CET (UTC: 18:00-22:59)
-- **Sleep**: 00:00-04:59 CET (UTC: 23:00-03:59) - no queries
+Cloud Scheduler triggers the scraper at dynamic intervals using `Europe/Paris` timezone (DST-aware — works for both CET and CEST automatically):
+- **Low morning (5-minute intervals)**: 05:00-05:59 Paris
+- **High morning (2-minute intervals)**: 06:00-09:59 Paris
+- **Off-peak (10-minute intervals)**: 10:00-15:59 Paris
+- **High evening (2-minute intervals)**: 16:00-18:59 Paris
+- **Low evening (5-minute intervals)**: 19:00-23:59 Paris
+- **Sleep**: 00:00-04:59 Paris - no queries
 
 ### 3.1 HTTP Server Architecture
 
@@ -119,17 +119,14 @@ This creates:
 - **Cloud Run Service**: `prenfe-scraper` (512Mi memory, 1 CPU, 3600s timeout, max 1 instance)
 - **Service Account**: `prenfe-scraper@kave-home-dwh-ds.iam.gserviceaccount.com`
 - **IAM Roles**: Storage Object Creator/Viewer, Cloud Logging Writer
-- **5 Cloud Scheduler Jobs** with HTTP POST triggers (UTC cron expressions for CET windows):
-  - `prenfe-low-early`: `*/5 4 * * *` (every 5 minutes, 05:00-05:59 CET / 04:00-04:59 UTC)
-  - `prenfe-high-morning`: `*/2 5-8 * * *` (every 2 minutes, 06:00-09:59 CET / 05:00-08:59 UTC)
-  - `prenfe-vlow-day`: `*/10 9-14 * * *` (every 10 minutes, 10:00-15:59 CET / 09:00-14:59 UTC)
-  - `prenfe-high-evening`: `*/2 15-17 * * *` (every 2 minutes, 16:00-18:59 CET / 15:00-17:59 UTC)
-  - `prenfe-low-late`: `*/5 18-22 * * *` (every 5 minutes, 19:00-23:59 CET / 18:00-22:59 UTC)
+- **5 Cloud Scheduler Jobs** with HTTP POST triggers (`Europe/Paris` timezone — DST-aware):
+  - `prenfe-low-early`: `*/5 5 * * *` (every 5 minutes, 05:00-05:59 Paris)
+  - `prenfe-high-morning`: `*/2 6-9 * * *` (every 2 minutes, 06:00-09:59 Paris)
+  - `prenfe-vlow-day`: `*/10 10-15 * * *` (every 10 minutes, 10:00-15:59 Paris)
+  - `prenfe-high-evening`: `*/2 16-18 * * *` (every 2 minutes, 16:00-18:59 Paris)
+  - `prenfe-low-late`: `*/5 19-23 * * *` (every 5 minutes, 19:00-23:59 Paris)
 
-**⚠️ Important Timezone Note:**
-All Cloud Scheduler jobs are configured with UTC cron expressions (in `Etc/UTC` timezone). The hour values in the cron schedules represent UTC hours, which automatically convert to CET times when executed. CET = UTC + 1 hour, so:
-- A job with schedule `*/5 4 * * *` runs at 04:00-04:59 UTC, which is 05:00-05:59 CET
-- This ensures the scraper runs during the intended Paris Time windows
+**Timezone**: All jobs use `Europe/Paris` IANA timezone. Cloud Scheduler automatically adjusts UTC execution times when DST changes (CET↔CEST), so no manual cron updates are needed twice a year.
 
 Total daily executions: **318 calls/day** across all scheduling windows.
 

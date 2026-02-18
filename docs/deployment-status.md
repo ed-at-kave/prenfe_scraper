@@ -41,13 +41,13 @@
 
 ## ✅ Completed (All Steps)
 
-### Cloud Scheduler Jobs  
-All Cloud Scheduler jobs have been created and are actively triggering the Cloud Run service at scheduled intervals (Paris Time - CET). The system is fully operational.
+### Cloud Scheduler Jobs
+
+All Cloud Scheduler jobs have been created and are actively triggering the Cloud Run service at scheduled intervals (Paris Time). The system is fully operational.
+
+**Timezone**: All jobs use `Europe/Paris` IANA timezone — DST transitions (CET↔CEST) are handled automatically by Cloud Scheduler. No manual cron updates needed when clocks change.
 
 #### Option A: Using gcloud (manual)
-
-**⚠️ Important Timezone Note:**
-All schedules below use UTC hour values (Etc/UTC timezone). Cloud Scheduler will execute at UTC times, which automatically convert to CET (UTC+1) windows. For example, `*/5 4 * * *` runs at 04:00-04:59 UTC, which is 05:00-05:59 CET.
 
 ```bash
 SERVICE_URL="https://prenfe-scraper-498526804762.europe-west1.run.app"
@@ -55,50 +55,55 @@ PROJECT_ID="kave-home-dwh-ds"
 REGION="europe-west1"
 ACCOUNT="prenfe-scraper@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Low morning (05:00-05:59 CET / 04:00-04:59 UTC) - every 5 minutes
+# Low morning (05:00-05:59 Paris) - every 5 minutes
 gcloud scheduler jobs create http prenfe-low-early \
   --location=$REGION \
-  --schedule="*/5 4 * * *" \
+  --schedule="*/5 5 * * *" \
+  --time-zone="Europe/Paris" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# High morning (06:00-09:59 CET / 05:00-08:59 UTC) - every 2 minutes
+# High morning (06:00-09:59 Paris) - every 2 minutes
 gcloud scheduler jobs create http prenfe-high-morning \
   --location=$REGION \
-  --schedule="*/2 5-8 * * *" \
+  --schedule="*/2 6-9 * * *" \
+  --time-zone="Europe/Paris" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Off-peak day (10:00-15:59 CET / 09:00-14:59 UTC) - every 10 minutes
+# Off-peak day (10:00-15:59 Paris) - every 10 minutes
 gcloud scheduler jobs create http prenfe-vlow-day \
   --location=$REGION \
-  --schedule="*/10 9-14 * * *" \
+  --schedule="*/10 10-15 * * *" \
+  --time-zone="Europe/Paris" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# High evening (16:00-18:59 CET / 15:00-17:59 UTC) - every 2 minutes
+# High evening (16:00-18:59 Paris) - every 2 minutes
 gcloud scheduler jobs create http prenfe-high-evening \
   --location=$REGION \
-  --schedule="*/2 15-17 * * *" \
+  --schedule="*/2 16-18 * * *" \
+  --time-zone="Europe/Paris" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Low evening (19:00-23:59 CET / 18:00-22:59 UTC) - every 5 minutes
+# Low evening (19:00-23:59 Paris) - every 5 minutes
 gcloud scheduler jobs create http prenfe-low-late \
   --location=$REGION \
-  --schedule="*/5 18-22 * * *" \
+  --schedule="*/5 19-23 * * *" \
+  --time-zone="Europe/Paris" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
@@ -161,13 +166,13 @@ gcloud scheduler jobs list --location=europe-west1 --project=kave-home-dwh-ds
 4. Files uploaded to: `gs://beta-tests/prenfe-data/`
 5. Logs written to Cloud Logging
 
-### Scheduling (Paris Time - CET)
-- **Low Morning**: 05:00-05:59 CET → Every 5 minutes
-- **High Morning**: 06:00-09:59 CET → Every 2 minutes
-- **Off-peak Day**: 10:00-15:59 CET → Every 10 minutes
-- **High Evening**: 16:00-18:59 CET → Every 2 minutes
-- **Low Evening**: 19:00-23:59 CET → Every 5 minutes
-- **Sleep**: 00:00-04:59 CET → No queries
+### Scheduling (Europe/Paris timezone — DST-aware, CET/CEST)
+- **Low Morning**: 05:00-05:59 Paris → Every 5 minutes
+- **High Morning**: 06:00-09:59 Paris → Every 2 minutes
+- **Off-peak Day**: 10:00-15:59 Paris → Every 10 minutes
+- **High Evening**: 16:00-18:59 Paris → Every 2 minutes
+- **Low Evening**: 19:00-23:59 Paris → Every 5 minutes
+- **Sleep**: 00:00-04:59 Paris → No queries
 
 ## Data Flow
 ```
