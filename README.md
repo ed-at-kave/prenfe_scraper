@@ -61,16 +61,16 @@ RENFE API (flota.json)
    Google Cloud Storage
 ```
 
-### Schedule (Paris Time - CET)
+### Schedule (Paris Time - CET, UTC+1)
 
-| Time Window | Interval | Purpose |
-|-------------|----------|---------|
-| **05:00–05:59** | Every 5 min | Low morning traffic |
-| **06:00–09:59** | Every 2 min | High morning demand |
-| **10:00–15:59** | Every 10 min | Off-peak midday |
-| **16:00–18:59** | Every 2 min | High evening demand |
-| **19:00–23:59** | Every 5 min | Low evening traffic |
-| **00:00–04:59** | OFF | Overnight sleep |
+| CET Time Window | UTC Time Window | Interval | Purpose |
+|-----------------|-----------------|----------|---------|
+| **05:00–05:59** | 04:00–04:59 | Every 5 min | Low morning traffic |
+| **06:00–09:59** | 05:00–08:59 | Every 2 min | High morning demand |
+| **10:00–15:59** | 09:00–14:59 | Every 10 min | Off-peak midday |
+| **16:00–18:59** | 15:00–17:59 | Every 2 min | High evening demand |
+| **19:00–23:59** | 18:00–22:59 | Every 5 min | Low evening traffic |
+| **00:00–04:59** | 23:00–03:59 (prev day) | OFF | Overnight sleep |
 
 ---
 
