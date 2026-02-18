@@ -285,10 +285,15 @@ sudo systemd-analyze verify /etc/systemd/system/prenfe-scraper.service
 
 ## Cost Estimate
 
-- **Compute**: ~$0.60/month (first 180,000 GB-seconds free)
-- **Logging**: ~$0.10/month
-- **Storage**: Covered by GCS bucket
-- **Total**: ~$0.70/month (mostly free tier)
+- **Compute (Cloud Run)**: 318 executions/day × 60 seconds × 0.5 GiB memory = 286,200 GiB-seconds/month
+  - Free tier: 360,000 GiB-seconds/month (entirely within free tier) ✅
+  - Cost: **$0.00/month**
+- **Cloud Scheduler**: 5 jobs (2 billable after 3-job free tier)
+  - Cost: **$0.20/month**
+- **Cloud Logging**: Minimal
+  - Cost: **~$0.05/month**
+- **Cloud Storage**: Covered by existing GCS bucket
+- **Total**: **~$0.25/month** (almost entirely free tier)
 
 ---
 

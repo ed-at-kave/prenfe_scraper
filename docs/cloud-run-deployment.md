@@ -214,11 +214,20 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 
 ## Estimated Costs
 
-- **Compute**: ~2,200 executions/day × 60 seconds = ~36,000 GB-seconds/month
-  - Cost: ~$0.60/month (first 180,000 GB-seconds free)
-- **Logging**: Minimal (~$0.10/month)
-- **Storage**: Already configured in GCS bucket
-- **Total**: ~$0.70/month (mostly free tier)
+Based on the 318 daily executions across 5 scheduled jobs:
+
+- **Compute (Cloud Run)**: 318 executions/day × 60 seconds × 0.5 GiB memory = 286,200 GiB-seconds/month
+  - Free tier: 360,000 GiB-seconds/month (request-based billing in europe-west1)
+  - Billable: 0 (entirely within free tier) ✅
+  - Cost: **$0.00/month**
+- **Cloud Scheduler**: 5 scheduled jobs
+  - Free tier: 3 jobs per billing account per month
+  - Billable: 2 jobs × $0.10/month
+  - Cost: **$0.20/month**
+- **Cloud Logging**: Minimal
+  - Cost: **~$0.05/month**
+- **Cloud Storage**: Already configured in GCS bucket
+- **Total**: **~$0.25/month** (almost entirely free tier)
 
 ## Troubleshooting
 

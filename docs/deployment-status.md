@@ -41,7 +41,7 @@
 
 ## ✅ Completed (All Steps)
 
-### Cloud Scheduler Jobs
+### Cloud Scheduler Jobs  
 All Cloud Scheduler jobs have been created and are actively triggering the Cloud Run service at scheduled intervals (Paris Time - CET). The system is fully operational.
 
 #### Option A: Using gcloud (manual)
@@ -193,13 +193,17 @@ run_fetch_cycle()
 ```
 
 ## Cost Estimation
-- **Compute**: ~2,200 executions/day × 60 seconds = ~36,000 GB-seconds/month
-  - Cost: ~$0.60/month (first 180,000 GB-seconds free)
-- **Cloud Scheduler**: ~4,000 jobs/month
-  - Cost: ~$0.20/month (first 3,650 jobs free)
-- **Cloud Logging**: Minimal (~$0.10/month)
+- **Compute (Cloud Run)**: 318 executions/day × 60 seconds × 0.5 GiB memory = 286,200 GiB-seconds/month
+  - Free tier: 360,000 GiB-seconds/month (request-based billing in europe-west1)
+  - Billable: 286,200 - 360,000 = **Zero** (entirely within free tier) ✅
+  - Cost: **$0.00/month**
+- **Cloud Scheduler**: 5 scheduled jobs
+  - Free tier: 3 jobs per month (per billing account)
+  - Billable: 5 - 3 = 2 jobs
+  - Cost: 2 × $0.10/month = **$0.20/month**
+- **Cloud Logging**: Minimal (~$0.05/month)
 - **Cloud Storage**: Existing bucket charges
-- **Total**: ~$0.90/month (mostly free tier)
+- **Total**: **~$0.25/month** (entirely within free tiers except minimal Scheduler cost)
 
 ## Next Steps
 1. Create Cloud Scheduler jobs (using gcloud or Terraform)
