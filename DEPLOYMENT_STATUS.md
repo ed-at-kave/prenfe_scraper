@@ -18,7 +18,8 @@
 - **Status**: ✅ Running and healthy
 - **Service Name**: prenfe-scraper
 - **Region**: europe-west1
-- **URL**: https://prenfe-scraper-498526804762.europe-west1.run.app
+- **URL**: https://prenfe-scraper-r2wu5n3zza-ew.a.run.app
+- **Last Data Collection**: 2026-02-18 at 10:03:42 CET
 - **Configuration**:
   - Memory: 512Mi
   - CPU: 1
@@ -33,14 +34,15 @@
 ### 4. Service Account
 - **Name**: prenfe-scraper@kave-home-dwh-ds.iam.gserviceaccount.com
 - **Permissions**:
-  - roles/storage.objectCreator
-  - roles/storage.objectViewer
-  - roles/logging.logWriter
+  - roles/storage.objectCreator (for GCS file uploads)
+  - roles/storage.objectViewer (for GCS access)
+  - roles/logging.logWriter (for Cloud Logging)
+  - roles/run.invoker (for Cloud Scheduler to trigger the service)
 
-## ⏳ Pending (Manual Steps)
+## ✅ Completed (All Steps)
 
 ### Cloud Scheduler Jobs
-The Cloud Scheduler jobs need to be created to trigger the Cloud Run service at scheduled intervals. Use one of these approaches:
+All Cloud Scheduler jobs have been created and are actively triggering the Cloud Run service at scheduled intervals (Paris Time - CET). The system is fully operational.
 
 #### Option A: Using gcloud (manual)
 
@@ -50,40 +52,50 @@ PROJECT_ID="kave-home-dwh-ds"
 REGION="europe-west1"
 ACCOUNT="prenfe-scraper@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Peak morning (05:30-09:30) - every 1 minute
-gcloud scheduler jobs create http prenfe-peak-morning \
+# Low morning (05:00-05:59 CET) - every 5 minutes
+gcloud scheduler jobs create http prenfe-low-early \
   --location=$REGION \
-  --schedule="*/1 5-8 * * *" \
+  --schedule="*/5 5 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Off-peak day (09:30-16:00) - every 10 minutes
-gcloud scheduler jobs create http prenfe-offpeak-day \
+# High morning (06:00-09:59 CET) - every 2 minutes
+gcloud scheduler jobs create http prenfe-high-morning \
   --location=$REGION \
-  --schedule="*/10 9-15 * * *" \
+  --schedule="*/2 6-9 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Peak evening (16:00-18:30) - every 1 minute
-gcloud scheduler jobs create http prenfe-peak-evening \
+# Off-peak day (10:00-15:59 CET) - every 10 minutes
+gcloud scheduler jobs create http prenfe-vlow-day \
   --location=$REGION \
-  --schedule="*/1 16-18 * * *" \
+  --schedule="*/10 10-15 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Off-peak evening (18:30-23:59) - every 10 minutes
-gcloud scheduler jobs create http prenfe-offpeak-evening \
+# High evening (16:00-18:59 CET) - every 2 minutes
+gcloud scheduler jobs create http prenfe-high-evening \
   --location=$REGION \
-  --schedule="*/10 18-23 * * *" \
+  --schedule="*/2 16-18 * * *" \
+  --uri="${SERVICE_URL}/" \
+  --http-method=POST \
+  --oidc-service-account-email=$ACCOUNT \
+  --oidc-token-audience="$SERVICE_URL/" \
+  --project=$PROJECT_ID
+
+# Low evening (19:00-23:59 CET) - every 5 minutes
+gcloud scheduler jobs create http prenfe-low-late \
+  --location=$REGION \
+  --schedule="*/5 19-23 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
@@ -146,12 +158,13 @@ gcloud scheduler jobs list --location=europe-west1 --project=kave-home-dwh-ds
 4. Files uploaded to: `gs://beta-tests/prenfe-data/`
 5. Logs written to Cloud Logging
 
-### Scheduling
-- **Peak Morning**: 05:30-09:30 → Every 1 minute
-- **Off-peak Day**: 09:30-16:00 → Every 10 minutes
-- **Peak Evening**: 16:00-18:30 → Every 1 minute
-- **Off-peak Evening**: 18:30-00:00 → Every 10 minutes
-- **Sleep**: 00:00-05:30 → No queries
+### Scheduling (Paris Time - CET)
+- **Low Morning**: 05:00-05:59 CET → Every 5 minutes
+- **High Morning**: 06:00-09:59 CET → Every 2 minutes
+- **Off-peak Day**: 10:00-15:59 CET → Every 10 minutes
+- **High Evening**: 16:00-18:59 CET → Every 2 minutes
+- **Low Evening**: 19:00-23:59 CET → Every 5 minutes
+- **Sleep**: 00:00-04:59 CET → No queries
 
 ## Data Flow
 ```
