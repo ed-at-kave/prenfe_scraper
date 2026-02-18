@@ -109,17 +109,17 @@ prenfe/
 - Output: `data/general-prenfe_YYYYMMDD_HHMMSS.json`
 - Use case: Complete train network analysis
 
-### 2. **prenfe-cat** (Catalan Regional Trains)
-- Filters for RG1 and R11 regional trains (Catalonia focus)
+### 2. **prenfe-cat** (Regional Trains)
+- Filters for all regional lines: R* (R1-R17) + RG1 (Girona) + RL* (RL3, RL4 - Lleida) + RT* (RT1, RT2 - Tarragona)
 - Output: `data/prenfe-cat_YYYYMMDD_HHMMSS.json`
-- Use case: Regional rail monitoring
+- Use case: Complete regional rail network monitoring
 
 ---
 
 ## Features
 
 - ✅ **Demand-based scheduling** - Updates every 2-10 minutes (Paris Time)
-- ✅ **Two parallel data flows** - All trains + Regional trains (R1/R2/R4/R11/R14/R15/R16)
+- ✅ **Two parallel data flows** - All trains + Complete regional network (R1-R17 + RG1 + RL3/RL4 + RT1/RT2)
 - ✅ **Cloud-native** - HTTP server on Cloud Run triggered by Cloud Scheduler
 - ✅ **GCS integration** - Automatic uploads with fallback to local storage
 - ✅ **Comprehensive logging** - Separate logs for each data flow
