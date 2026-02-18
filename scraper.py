@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 """
-RENFE Real-time Train Scraper
-Scrapes train fleet data from flota.json every minute
-Supports multiple flows: general-prenfe (all trains) and prenfe-cat (RG1/R11 only)
+RENFE Real-time Train Scraper - Cloud Run HTTP Server
+
+Fetches train fleet data from RENFE API and processes two data flows:
+- general-prenfe: All trains (uploaded to GCS)
+- prenfe-cat: Regional trains R1/R2/R4/R11/R14/R15/R16 (uploaded to GCS)
+
+Deployment: Cloud Run service triggered by Cloud Scheduler at intervals:
+- 05:00-05:59 CET: Every 5 minutes
+- 06:00-09:59 CET: Every 2 minutes
+- 10:00-15:59 CET: Every 10 minutes
+- 16:00-18:59 CET: Every 2 minutes
+- 19:00-23:59 CET: Every 5 minutes
+- 00:00-04:59 CET: Sleep (no queries)
 """
 
 import requests
 import json
-import time
 import os
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
-from logging.handlers import TimedRotatingFileHandler
 from google.cloud import storage
-from flask import Flask, request
-import functools
+from flask import Flask
 
 # Configuration
 BASE_URL = "https://tiempo-real.renfe.com"
@@ -300,50 +307,8 @@ def save_flota_data(data):
     cleanup_old_logs()
 
 
-def get_interval_for_time():
-    """
-    Get the fetch interval based on current time.
-
-    Schedule:
-    - 05:50-09:30: Every 1 minute (peak morning)
-    - 16:00-18:30: Every 1 minute (peak evening)
-    - 09:30-16:00: Every 10 minutes (daytime off-peak)
-    - 18:30-05:50: Every 10 minutes (evening/night)
-    - 00:00-05:50: Do NOT fetch (night hours - return None to skip)
-
-    Returns:
-        int: Interval in seconds, or None to skip fetching during night
-    """
-    now = datetime.now()
-    hour = now.hour
-    minute = now.minute
-    current_minutes = hour * 60 + minute
-
-    # Night hours: 00:00-05:50 (0-350 minutes) - skip queries
-    night_start = 0 * 60           # 0 minutes (00:00)
-    night_end = 5 * 60 + 50        # 350 minutes (05:50)
-
-    # Peak hours: 05:50-09:30 (350-570 minutes) and 16:00-18:30 (960-1110 minutes)
-    morning_start = 5 * 60 + 50    # 350 minutes (05:50)
-    morning_end = 9 * 60 + 30      # 570 minutes (09:30)
-    evening_start = 16 * 60        # 960 minutes (16:00)
-    evening_end = 18 * 60 + 30     # 1110 minutes (18:30)
-
-    # Skip queries during night hours
-    if night_start <= current_minutes < night_end:
-        return None  # Do not fetch
-
-    # Peak hours: 1 minute interval
-    if (morning_start <= current_minutes <= morning_end or
-        evening_start <= current_minutes <= evening_end):
-        return 60  # 1 minute during peak hours
-
-    # Off-peak hours: 10 minutes interval
-    return 600  # 10 minutes during off-peak hours
-
-
 def run_fetch_cycle():
-    """Execute a single fetch/process cycle. Used by both CLI and HTTP server."""
+    """Execute a single fetch/process cycle triggered by Cloud Scheduler HTTP request."""
     try:
         data = fetch_flota_data()
         if data:
@@ -377,83 +342,9 @@ def health():
     return {'status': 'ok'}, 200
 
 
-def main():
-    """
-    Main scraper loop - runs with dynamic intervals based on time:
-    - Peak hours (05:30-09:30, 16:00-18:30): Every 1 minute
-    - Off-peak: Every 10 minutes
-    - Sleep: 00:00-05:30
-    Two flows:
-    - general-prenfe: All trains
-    - prenfe-cat: Regional trains (R1, R11, R15, R16, R2, R2N, R2S, R4)
-    Logs retained for 2.5 hours
-    """
-    general_logger.info(f"Starting RENFE scraper with dynamic scheduling")
-    general_logger.info(f"Peak hours (1min): 05:30-09:30, 16:00-18:30")
-    general_logger.info(f"Off-peak (10min): 09:30-16:00, 18:30-00:00")
-    general_logger.info(f"Sleep: 00:00-05:30")
-    general_logger.info(f"Endpoint: {FULL_URL}")
-    general_logger.info(f"Log retention: {LOG_RETENTION_SECONDS / 3600} hours")
-    cat_logger.info(f"Starting prenfe-cat flow - filtering regional trains (R1, R11, R15, R16, R2, R2N, R2S, R4)")
-
-    iteration = 0
-    last_interval = None
-
-    try:
-        while True:
-            # Get current interval
-            interval = get_interval_for_time()
-
-            # Log interval change
-            if interval != last_interval:
-                if interval is None:
-                    interval_label = "SLEEPING (night hours 00:00-05:30)"
-                elif interval == 60:
-                    interval_label = "1min (peak hours)"
-                else:
-                    interval_label = "10min (off-peak)"
-                general_logger.info(f"Schedule switched to {interval_label}")
-                cat_logger.info(f"Schedule switched to {interval_label}")
-                last_interval = interval
-
-            # Skip fetching during night hours (00:00-05:30)
-            if interval is None:
-                general_logger.debug("Night hours: sleeping for 5 minutes before checking again")
-                time.sleep(300)  # Sleep 5 minutes during night, then check if we can resume
-                continue
-
-            # Fetch during active hours
-            iteration += 1
-            general_logger.info(f"--- Iteration {iteration} ---")
-            cat_logger.info(f"--- Iteration {iteration} ---")
-
-            # Run single fetch cycle
-            run_fetch_cycle()
-
-            # Wait for next iteration with dynamic interval
-            general_logger.debug(f"Waiting {interval} seconds until next fetch...")
-            time.sleep(interval)
-
-    except KeyboardInterrupt:
-        general_logger.info("Scraper stopped by user")
-        cat_logger.info("Scraper stopped by user")
-    except Exception as e:
-        general_logger.error(f"Unexpected error: {e}", exc_info=True)
-        cat_logger.error(f"Unexpected error: {e}", exc_info=True)
-    finally:
-        session.close()
-        general_logger.info("Session closed")
-        cat_logger.info("Session closed")
-
-
 if __name__ == "__main__":
-    # Check if running on Cloud Run (PORT env var indicates HTTP server mode)
-    port = os.getenv('PORT')
-    if port:
-        # Cloud Run: start HTTP server
-        port = int(port)
-        general_logger.info(f"Starting Cloud Run HTTP server on port {port}")
-        app.run(host='0.0.0.0', port=port, debug=False)
-    else:
-        # Local development: run CLI with dynamic scheduling
-        main()
+    # Cloud Run: start HTTP server on configured PORT
+    port = int(os.getenv('PORT', 8080))
+    general_logger.info(f"Starting Cloud Run HTTP server on port {port}")
+    general_logger.info(f"Ready to receive Cloud Scheduler triggers")
+    app.run(host='0.0.0.0', port=port, debug=False)
