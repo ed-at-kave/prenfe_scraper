@@ -94,11 +94,13 @@ Cloud Scheduler triggers the scraper at dynamic intervals (Paris Time - CET):
 - **Low evening (5-minute intervals)**: 19:00-23:59 CET
 - **Sleep**: 00:00-04:59 CET (no queries)
 
-### 3.1 Important: HTTP Server Requirement
+### 3.1 HTTP Server Architecture
 
-⚠️ **Critical**: Cloud Run requires containers to listen on HTTP port 8080. The scraper is implemented to run one complete fetch cycle per invocation when triggered by Cloud Scheduler HTTP requests.
-
-The current architecture uses `get_interval_for_time()` to determine sleep durations. When deployed to Cloud Run with Cloud Scheduler triggers, each trigger will execute one fetch cycle immediately (bypassing internal scheduling).
+The scraper runs as a Flask HTTP server on port 8080:
+- **POST /** - Cloud Scheduler triggers this endpoint to execute one fetch cycle
+- **GET /health** - Health check endpoint for monitoring
+- Each trigger executes one complete fetch cycle (general-prenfe + prenfe-cat flows)
+- Cloud Scheduler handles all scheduling via cron expressions
 
 ### 3.2 Deploy Infrastructure with Terraform
 
@@ -124,68 +126,29 @@ This creates:
   - `prenfe-high-evening`: */2 16-18 * * * (every 2 minutes, 16:00-18:59 CET)
   - `prenfe-low-late`: */5 19-23 * * * (every 5 minutes, 19:00-23:59 CET)
 
-### 3.3 Modify scraper.py for HTTP endpoints
+### 3.3 Flask HTTP Server (Already Configured)
 
-Before deploying, update scraper.py to add Flask HTTP wrapper for Cloud Scheduler triggers:
+The scraper.py file already includes the Flask HTTP server:
+- Listens on `PORT` environment variable (default: 8080)
+- **POST /** endpoint - Triggers one fetch cycle
+- **GET /health** endpoint - Health check
+- No code modifications needed before deployment
 
-```python
-from flask import Flask
-import os
+Flask is already in requirements.txt (v3.0.0+)
 
-app = Flask(__name__)
+### 3.4 Verify IAM Permissions
 
-@app.route('/', methods=['POST'])
-def trigger():
-    """HTTP endpoint for Cloud Scheduler triggers"""
-    try:
-        # Run a single fetch/process cycle
-        process_general_flow()
-        process_cat_flow()
-        return {'status': 'success'}, 200
-    except Exception as e:
-        return {'status': 'error', 'message': str(e)}, 500
-
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
-```
-
-Also add Flask to requirements.txt:
-```
-flask>=3.0.0
-```
-
-## Step 4: Set Up Pub/Sub Trigger (Optional - for alternative Scheduler integration)
-
-If using Cloud Scheduler to trigger via Pub/Sub:
+After Terraform deployment, verify the service account has invoker role:
 
 ```bash
-# Create Pub/Sub topic
-gcloud pubsub topics create prenfe-scraper-trigger \
-  --project=${PROJECT_ID}
-
-# Create Pub/Sub subscription that triggers Cloud Run
-gcloud pubsub subscriptions create prenfe-scraper-subscription \
-  --topic=prenfe-scraper-trigger \
-  --push-endpoint=https://${SERVICE_NAME}-REGION-${PROJECT_ID}.a.run.app/ \
-  --push-auth-service-account=${SERVICE_ACCOUNT} \
-  --project=${PROJECT_ID}
+gcloud run services get-iam-policy prenfe-scraper \
+  --region=europe-west1 \
+  --project=kave-home-dwh-ds
 ```
 
-## Step 4: Deploy with Terraform (Complete Setup)
+The `prenfe-scraper` service account should have `roles/run.invoker` role.
 
-Once Terraform is installed, deploy all infrastructure with:
-
-```bash
-terraform init
-terraform plan
-terraform apply
-```
-
-This will create:
-- Service account: prenfe-scraper
-- IAM role bindings for storage and logging
-- 4 Cloud Scheduler jobs for dynamic scheduling
+## Step 4: Monitoring & Logs
 
 ## Monitoring and Logs
 

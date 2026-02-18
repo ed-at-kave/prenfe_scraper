@@ -2,13 +2,22 @@
 
 **Real-time train fleet data from Spanish National Railway Company (RENFE) → Google Cloud Storage**
 
-A production-grade scraper that fetches live train fleet data from [RENFE](https://www.renfe.com) and saves it to Google Cloud Storage with intelligent scheduling based on demand patterns.
+A production-grade Cloud Run service that fetches live train fleet data from [RENFE](https://www.renfe.com) and saves it to Google Cloud Storage. Triggered by Cloud Scheduler at demand-based intervals (every 2-10 minutes).
 
 ---
 
 ## Quick Start
 
-### Local Development (1-2 minutes)
+### Cloud Run (Production)
+
+See [docs/cloud-run-deployment.md](docs/cloud-run-deployment.md) for complete setup:
+```bash
+cd infra/terraform
+terraform plan
+terraform apply
+```
+
+### Local Testing
 
 ```bash
 # 1. Install dependencies
@@ -16,17 +25,20 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Run the scraper
+# 2. Test the Flask HTTP server
+export PORT=8080
 python3 scraper.py
 
-# Scrapes every 60 seconds. Press Ctrl+C to stop.
+# Service listens on http://localhost:8080
+# POST http://localhost:8080/ to trigger one fetch cycle
+# GET http://localhost:8080/health for health check
 ```
 
-### With Docker
+### Docker
 
 ```bash
 docker build -t prenfe-scraper .
-docker run --rm -v $(pwd)/data:/app/data prenfe-scraper
+docker run -e PORT=8080 -p 8080:8080 prenfe-scraper
 ```
 
 ---
@@ -106,14 +118,14 @@ prenfe/
 
 ## Features
 
-- ✅ **Real-time fetching** - Updates every 2-10 minutes (Paris Time schedule)
-- ✅ **Two data flows** - General fleet + Catalan regional trains
-- ✅ **Cloud-native** - Deploys to Cloud Run with Cloud Scheduler
-- ✅ **Local fallback** - Runs standalone on-prem servers with systemd
-- ✅ **GCS integration** - Automatic uploads to Google Cloud Storage
+- ✅ **Demand-based scheduling** - Updates every 2-10 minutes (Paris Time)
+- ✅ **Two parallel data flows** - All trains + Regional trains (R1/R2/R4/R11/R14/R15/R16)
+- ✅ **Cloud-native** - HTTP server on Cloud Run triggered by Cloud Scheduler
+- ✅ **GCS integration** - Automatic uploads with fallback to local storage
 - ✅ **Comprehensive logging** - Separate logs for each data flow
-- ✅ **Error handling** - Retries with exponential backoff
+- ✅ **Error handling** - Graceful error responses with detailed logging
 - ✅ **Connection pooling** - Efficient HTTP session management
+- ✅ **Health checks** - `/health` endpoint for monitoring
 
 ---
 
@@ -165,21 +177,12 @@ terraform plan
 terraform apply
 ```
 
-### On-Premises (systemd)
+### On-Premises (Deprecated)
 
-See [infra/systemd/SETUP.md](infra/systemd/SETUP.md) for:
-- Service installation
-- Auto-start configuration
-- Log viewing with journalctl
-- Troubleshooting
-
-**Quick install**:
-```bash
-sudo cp infra/systemd/prenfe-scraper.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable prenfe-scraper.service
-sudo systemctl start prenfe-scraper.service
-```
+The scraper is now optimized for Cloud Run deployment. For on-premises usage:
+- The service runs as a Flask HTTP server (no longer has built-in scheduling)
+- You can still run it locally, but will need to implement your own scheduler
+- See [infra/systemd/SETUP.md](infra/systemd/SETUP.md) for historical reference
 
 ---
 
@@ -254,9 +257,9 @@ sudo systemd-analyze verify /etc/systemd/system/prenfe-scraper.service
 4. Commit with clear message
 
 ### Update Schedule?
-- For Cloud Run: Edit cron expressions in `infra/terraform/main.tf`
-- For on-prem: Update `get_interval_for_time()` in `scraper.py`
+- Edit cron expressions in `infra/terraform/main.tf` (Cloud Scheduler configuration)
 - Always use **Paris Time (CET)** in schedule comments
+- Run `terraform plan && terraform apply` to deploy changes
 
 ---
 
