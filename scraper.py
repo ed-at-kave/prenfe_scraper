@@ -4,7 +4,7 @@ RENFE Real-time Train Scraper - Cloud Run HTTP Server
 
 Fetches train fleet data from RENFE API and processes two data flows:
 - general-prenfe: All trains (uploaded to GCS)
-- prenfe-cat: Regional trains R1/R2/R4/R11/R14/R15/R16 (uploaded to GCS)
+- prenfe-cat: Regional trains R1/R2/R2N/R2S/R4/R11/R14/R15/R16/RG1 (uploaded to GCS)
 
 Deployment: Cloud Run service triggered by Cloud Scheduler at intervals:
 - 05:00-05:59 CET: Every 5 minutes
@@ -128,7 +128,7 @@ def fetch_flota_data():
 
 def filter_cat_trains(data):
     """
-    Filter data to only include regional trains (R1, R14, R15, R16, etc.)
+    Filter data to only include regional trains (R1, R2, R4, R11, R14, R15, R16, R2N, R2S, RG1)
 
     Args:
         data (list or dict): The flota data
@@ -145,7 +145,7 @@ def filter_cat_trains(data):
     if isinstance(trains_list, list):
         return [
             item for item in trains_list
-            if isinstance(item, dict) and item.get('codLinea', '').upper() in ('R1', 'R11', 'R14', 'R15', 'R16', 'R2', 'R2N', 'R2S', 'R4')
+            if isinstance(item, dict) and item.get('codLinea', '').upper() in ('R1', 'R11', 'R14', 'R15', 'R16', 'R2', 'R2N', 'R2S', 'R4', 'RG1')
         ]
 
     return data
