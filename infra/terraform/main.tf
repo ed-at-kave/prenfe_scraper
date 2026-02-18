@@ -105,12 +105,15 @@ resource "google_cloud_run_service" "prenfe_scraper" {
   ]
 }
 
-# Cloud Scheduler Job - Peak Morning (05:30-09:30, every 1 minute)
-resource "google_cloud_scheduler_job" "prenfe_peak_morning" {
-  name             = "prenfe-peak-morning"
-  description      = "Trigger RENFE scraper during peak morning hours"
-  schedule         = "*/1 5-8 * * *"  # Every minute, 5:00-8:59 (covers 05:30-09:30)
-  time_zone        = "Europe/Madrid"
+# Cloud Scheduler Jobs - all use Europe/Paris timezone (CET/CEST, DST-aware)
+# Cron expressions use local Paris time, Cloud Scheduler handles UTC conversion automatically.
+
+# Low morning (05:00-05:59 Paris) - every 5 minutes
+resource "google_cloud_scheduler_job" "prenfe_low_early" {
+  name             = "prenfe-low-early"
+  description      = "Trigger RENFE scraper during low morning hours (05:00-05:59 Paris)"
+  schedule         = "*/5 5 * * *"
+  time_zone        = "Europe/Paris"
   region           = var.region
   project          = var.project_id
   attempt_deadline = "320s"
@@ -135,12 +138,12 @@ resource "google_cloud_scheduler_job" "prenfe_peak_morning" {
   }
 }
 
-# Cloud Scheduler Job - Off-peak Day (09:30-16:00, every 10 minutes)
-resource "google_cloud_scheduler_job" "prenfe_offpeak_day" {
-  name             = "prenfe-offpeak-day"
-  description      = "Trigger RENFE scraper during off-peak daytime hours"
-  schedule         = "*/10 9-15 * * *"  # Every 10 minutes, 9:00-15:59
-  time_zone        = "Europe/Madrid"
+# High morning (06:00-09:59 Paris) - every 2 minutes
+resource "google_cloud_scheduler_job" "prenfe_high_morning" {
+  name             = "prenfe-high-morning"
+  description      = "Trigger RENFE scraper during high morning hours (06:00-09:59 Paris)"
+  schedule         = "*/2 6-9 * * *"
+  time_zone        = "Europe/Paris"
   region           = var.region
   project          = var.project_id
   attempt_deadline = "320s"
@@ -165,12 +168,12 @@ resource "google_cloud_scheduler_job" "prenfe_offpeak_day" {
   }
 }
 
-# Cloud Scheduler Job - Peak Evening (16:00-18:30, every 1 minute)
-resource "google_cloud_scheduler_job" "prenfe_peak_evening" {
-  name             = "prenfe-peak-evening"
-  description      = "Trigger RENFE scraper during peak evening hours"
-  schedule         = "*/1 16-18 * * *"  # Every minute, 16:00-18:59
-  time_zone        = "Europe/Madrid"
+# Off-peak day (10:00-15:59 Paris) - every 10 minutes
+resource "google_cloud_scheduler_job" "prenfe_vlow_day" {
+  name             = "prenfe-vlow-day"
+  description      = "Trigger RENFE scraper during off-peak daytime hours (10:00-15:59 Paris)"
+  schedule         = "*/10 10-15 * * *"
+  time_zone        = "Europe/Paris"
   region           = var.region
   project          = var.project_id
   attempt_deadline = "320s"
@@ -195,12 +198,42 @@ resource "google_cloud_scheduler_job" "prenfe_peak_evening" {
   }
 }
 
-# Cloud Scheduler Job - Off-peak Evening (18:30-23:59, every 10 minutes)
-resource "google_cloud_scheduler_job" "prenfe_offpeak_evening" {
-  name             = "prenfe-offpeak-evening"
-  description      = "Trigger RENFE scraper during off-peak evening hours"
-  schedule         = "*/10 18-23 * * *"  # Every 10 minutes, 18:00-23:59
-  time_zone        = "Europe/Madrid"
+# High evening (16:00-18:59 Paris) - every 2 minutes
+resource "google_cloud_scheduler_job" "prenfe_high_evening" {
+  name             = "prenfe-high-evening"
+  description      = "Trigger RENFE scraper during high evening hours (16:00-18:59 Paris)"
+  schedule         = "*/2 16-18 * * *"
+  time_zone        = "Europe/Paris"
+  region           = var.region
+  project          = var.project_id
+  attempt_deadline = "320s"
+
+  labels = {
+    "project" = "prenfe"
+    "dept"    = "general"
+  }
+
+  http_target {
+    http_method = "POST"
+    uri         = "${google_cloud_run_service.prenfe_scraper.status[0].url}/"
+
+    headers = {
+      "Content-Type" = "application/json"
+    }
+
+    oidc_token {
+      service_account_email = google_service_account.prenfe_scraper.email
+      audience              = google_cloud_run_service.prenfe_scraper.status[0].url
+    }
+  }
+}
+
+# Low evening (19:00-23:59 Paris) - every 5 minutes
+resource "google_cloud_scheduler_job" "prenfe_low_late" {
+  name             = "prenfe-low-late"
+  description      = "Trigger RENFE scraper during low evening hours (19:00-23:59 Paris)"
+  schedule         = "*/5 19-23 * * *"
+  time_zone        = "Europe/Paris"
   region           = var.region
   project          = var.project_id
   attempt_deadline = "320s"
@@ -239,9 +272,10 @@ output "service_account_email" {
 output "scheduler_jobs" {
   description = "Cloud Scheduler job names"
   value = {
-    peak_morning   = google_cloud_scheduler_job.prenfe_peak_morning.name
-    offpeak_day    = google_cloud_scheduler_job.prenfe_offpeak_day.name
-    peak_evening   = google_cloud_scheduler_job.prenfe_peak_evening.name
-    offpeak_evening = google_cloud_scheduler_job.prenfe_offpeak_evening.name
+    low_early     = google_cloud_scheduler_job.prenfe_low_early.name
+    high_morning  = google_cloud_scheduler_job.prenfe_high_morning.name
+    vlow_day      = google_cloud_scheduler_job.prenfe_vlow_day.name
+    high_evening  = google_cloud_scheduler_job.prenfe_high_evening.name
+    low_late      = google_cloud_scheduler_job.prenfe_low_late.name
   }
 }
