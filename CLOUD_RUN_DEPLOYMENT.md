@@ -61,6 +61,12 @@ gcloud projects add-iam-policy-binding ${PROJECT_ID} \
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
   --member="serviceAccount:${SERVICE_ACCOUNT}" \
   --role="roles/logging.logWriter"
+
+# Cloud Run invoker (required for Cloud Scheduler to trigger the service)
+gcloud run services add-iam-policy-binding ${SERVICE_NAME} \
+  --region=${REGION} \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/run.invoker"
 ```
 
 ### 2.3 Deploy Cloud Run service
@@ -80,10 +86,13 @@ gcloud run deploy ${SERVICE_NAME} \
 
 ## Step 3: Deploy with Terraform
 
-The scraper uses dynamic intervals managed via `get_interval_for_time()`:
-- **Peak hours (1-minute intervals)**: 05:30-09:30, 16:00-18:30
-- **Off-peak (10-minute intervals)**: 09:30-16:00, 18:30-00:00
-- **Sleep**: 00:00-05:30
+Cloud Scheduler triggers the scraper at dynamic intervals (Paris Time - CET):
+- **Low morning (5-minute intervals)**: 05:00-05:59 CET
+- **High morning (2-minute intervals)**: 06:00-09:59 CET
+- **Off-peak (10-minute intervals)**: 10:00-15:59 CET
+- **High evening (2-minute intervals)**: 16:00-18:59 CET
+- **Low evening (5-minute intervals)**: 19:00-23:59 CET
+- **Sleep**: 00:00-04:59 CET (no queries)
 
 ### 3.1 Important: HTTP Server Requirement
 
@@ -108,11 +117,12 @@ This creates:
 - **Cloud Run Service**: `prenfe-scraper` (512Mi memory, 1 CPU, 3600s timeout, max 1 instance)
 - **Service Account**: `prenfe-scraper@kave-home-dwh-ds.iam.gserviceaccount.com`
 - **IAM Roles**: Storage Object Creator/Viewer, Cloud Logging Writer
-- **4 Cloud Scheduler Jobs** with HTTP POST triggers:
-  - `prenfe-peak-morning`: */1 5-8 * * * (every minute, 5:00-8:59)
-  - `prenfe-offpeak-day`: */10 9-15 * * * (every 10 minutes, 9:00-15:59)
-  - `prenfe-peak-evening`: */1 16-18 * * * (every minute, 16:00-18:59)
-  - `prenfe-offpeak-evening`: */10 18-23 * * * (every 10 minutes, 18:00-23:59)
+- **5 Cloud Scheduler Jobs** with HTTP POST triggers (Paris Time - CET):
+  - `prenfe-low-early`: */5 5 * * * (every 5 minutes, 05:00-05:59 CET)
+  - `prenfe-high-morning`: */2 6-9 * * * (every 2 minutes, 06:00-09:59 CET)
+  - `prenfe-vlow-day`: */10 10-15 * * * (every 10 minutes, 10:00-15:59 CET)
+  - `prenfe-high-evening`: */2 16-18 * * * (every 2 minutes, 16:00-18:59 CET)
+  - `prenfe-low-late`: */5 19-23 * * * (every 5 minutes, 19:00-23:59 CET)
 
 ### 3.3 Modify scraper.py for HTTP endpoints
 
