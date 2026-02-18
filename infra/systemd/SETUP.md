@@ -4,7 +4,7 @@
 
 ### 1. Copy service file to systemd directory:
 ```bash
-sudo cp /home/eguiu/betas/Prenfe/prenfe-scraper.service /etc/systemd/system/
+sudo cp /home/eguiu/betas/Prenfe/infra/systemd/prenfe-scraper.service /etc/systemd/system/
 ```
 
 ### 2. Reload systemd daemon:
@@ -99,11 +99,12 @@ sudo systemctl is-active prenfe-scraper.service
 
 ## Scheduling
 
-The scraper has built-in dynamic scheduling:
-- **05:50-09:30**: Every 1 minute (peak morning)
-- **16:00-18:30**: Every 1 minute (peak evening)
-- **09:30-16:00**: Every 10 minutes (daytime)
-- **18:30-23:59**: Every 10 minutes (evening)
-- **00:00-05:50**: Sleep (no queries)
+The scraper has built-in dynamic scheduling based on Paris Time (CET):
+- **05:00-05:59**: Every 5 minutes (low morning traffic)
+- **06:00-09:59**: Every 2 minutes (high morning demand)
+- **10:00-15:59**: Every 10 minutes (off-peak midday)
+- **16:00-18:59**: Every 2 minutes (high evening demand)
+- **19:00-23:59**: Every 5 minutes (low evening traffic)
+- **00:00-04:59**: Sleep (no queries)
 
-No additional cron jobs needed!
+No additional cron jobs needed - scheduling is handled by `get_interval_for_time()` in scraper.py

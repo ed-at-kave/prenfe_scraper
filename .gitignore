@@ -11,3 +11,4 @@ data/*.json
 logs/
 .env
 .env.local
+.worktrees/
