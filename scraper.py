@@ -4,7 +4,7 @@ RENFE Real-time Train Scraper - Cloud Run HTTP Server
 
 Fetches train fleet data from RENFE API and processes two data flows:
 - general-prenfe: All trains (uploaded to GCS)
-- prenfe-cat: Regional trains R1/R2/R2N/R2S/R4/R11/R14/R15/R16/RG1 (uploaded to GCS)
+- prenfe-cat: Regional trains - all R* + RG1 + RL* + RT* (uploaded to GCS)
 
 Deployment: Cloud Run service triggered by Cloud Scheduler at intervals:
 - 05:00-05:59 CET: Every 5 minutes
@@ -128,7 +128,11 @@ def fetch_flota_data():
 
 def filter_cat_trains(data):
     """
-    Filter data to only include regional trains (R1, R2, R4, R11, R14, R15, R16, R2N, R2S, RG1)
+    Filter data to only include regional trains (all R*, RG1, RL*, RT*)
+    - R*: Main regional network (R1-R17)
+    - RG1: Girona regional trains
+    - RL3, RL4: Lleida regional (Rodalies Lleida)
+    - RT1, RT2: Tarragona regional (Tram)
 
     Args:
         data (list or dict): The flota data
@@ -145,7 +149,10 @@ def filter_cat_trains(data):
     if isinstance(trains_list, list):
         return [
             item for item in trains_list
-            if isinstance(item, dict) and item.get('codLinea', '').upper() in ('R1', 'R11', 'R14', 'R15', 'R16', 'R2', 'R2N', 'R2S', 'R4', 'RG1')
+            if isinstance(item, dict) and item.get('codLinea', '').upper() in (
+                'R1', 'R2', 'R2N', 'R2S', 'R3', 'R4', 'R7', 'R8', 'R11', 'R13', 'R14', 'R15', 'R16', 'R17',
+                'RG1', 'RL3', 'RL4', 'RT1', 'RT2'
+            )
         ]
 
     return data
