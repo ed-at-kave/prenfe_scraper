@@ -46,56 +46,59 @@ All Cloud Scheduler jobs have been created and are actively triggering the Cloud
 
 #### Option A: Using gcloud (manual)
 
+**⚠️ Important Timezone Note:**
+All schedules below use UTC hour values (Etc/UTC timezone). Cloud Scheduler will execute at UTC times, which automatically convert to CET (UTC+1) windows. For example, `*/5 4 * * *` runs at 04:00-04:59 UTC, which is 05:00-05:59 CET.
+
 ```bash
 SERVICE_URL="https://prenfe-scraper-498526804762.europe-west1.run.app"
 PROJECT_ID="kave-home-dwh-ds"
 REGION="europe-west1"
 ACCOUNT="prenfe-scraper@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Low morning (05:00-05:59 CET) - every 5 minutes
+# Low morning (05:00-05:59 CET / 04:00-04:59 UTC) - every 5 minutes
 gcloud scheduler jobs create http prenfe-low-early \
   --location=$REGION \
-  --schedule="*/5 5 * * *" \
+  --schedule="*/5 4 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# High morning (06:00-09:59 CET) - every 2 minutes
+# High morning (06:00-09:59 CET / 05:00-08:59 UTC) - every 2 minutes
 gcloud scheduler jobs create http prenfe-high-morning \
   --location=$REGION \
-  --schedule="*/2 6-9 * * *" \
+  --schedule="*/2 5-8 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Off-peak day (10:00-15:59 CET) - every 10 minutes
+# Off-peak day (10:00-15:59 CET / 09:00-14:59 UTC) - every 10 minutes
 gcloud scheduler jobs create http prenfe-vlow-day \
   --location=$REGION \
-  --schedule="*/10 10-15 * * *" \
+  --schedule="*/10 9-14 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# High evening (16:00-18:59 CET) - every 2 minutes
+# High evening (16:00-18:59 CET / 15:00-17:59 UTC) - every 2 minutes
 gcloud scheduler jobs create http prenfe-high-evening \
   --location=$REGION \
-  --schedule="*/2 16-18 * * *" \
+  --schedule="*/2 15-17 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
   --oidc-token-audience="$SERVICE_URL/" \
   --project=$PROJECT_ID
 
-# Low evening (19:00-23:59 CET) - every 5 minutes
+# Low evening (19:00-23:59 CET / 18:00-22:59 UTC) - every 5 minutes
 gcloud scheduler jobs create http prenfe-low-late \
   --location=$REGION \
-  --schedule="*/5 19-23 * * *" \
+  --schedule="*/5 18-22 * * *" \
   --uri="${SERVICE_URL}/" \
   --http-method=POST \
   --oidc-service-account-email=$ACCOUNT \
